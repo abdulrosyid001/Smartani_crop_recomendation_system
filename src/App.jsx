@@ -1,15 +1,30 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
 import smartaniLogo from './assets/smartani.png'
 import './App.css'
 
 function App() {
-  const [locationQuery, setLocationQuery] = useState('')
   const [temperature, setTemperature] = useState('')
   const [rainfall, setRainfall] = useState('')
-  const [tempStatus, setTempStatus] = useState('')
-  const [prediction, setPrediction] = useState('')
+  const [prediction, setPrediction] = useState(null)
   const [predictStatus, setPredictStatus] = useState('')
+  const [diseaseFile, setDiseaseFile] = useState(null)
+  const [diseasePreview, setDiseasePreview] = useState('')
+  const [diseaseStatus, setDiseaseStatus] = useState('')
+  const [diseaseResult, setDiseaseResult] = useState(null)
+  const [fertilizerData, setFertilizerData] = useState({
+    temperature: '',
+    moisture: '',
+    rainfall: '',
+    ph: '',
+    soil: '',
+    crop: '',
+    nitrogen: '',
+    potassium: '',
+    phosphorous: '',
+    carbon: '',
+  })
+  const [fertilizerStatus, setFertilizerStatus] = useState('')
+  const [fertilizerPrediction, setFertilizerPrediction] = useState(null)
   const [formData, setFormData] = useState({
     humidity: '',
     ph: '',
@@ -20,13 +35,12 @@ function App() {
     soilType: '',
   })
 
-  const handleLocationChange = (event) => {
-    setLocationQuery(event.target.value)
-    if (tempStatus) {
-      setTempStatus('')
-    }
-    setTemperature('')
-    setRainfall('')
+  const handleTemperatureChange = (event) => {
+    setTemperature(event.target.value)
+  }
+
+  const handleRainfallChange = (event) => {
+    setRainfall(event.target.value)
   }
 
   const handleFormChange = (event) => {
@@ -40,68 +54,111 @@ function App() {
     }
   }
 
-  const handleFetchTemperature = async () => {
-    const trimmedLocation = locationQuery.trim()
-    if (!trimmedLocation) {
-      setTempStatus('Masukkan lokasi terlebih dahulu.')
-      setTemperature('')
+  const handleDiseaseFileChange = (event) => {
+    const file = event.target.files?.[0] || null
+    if (diseasePreview) {
+      URL.revokeObjectURL(diseasePreview)
+    }
+    setDiseaseFile(file)
+    setDiseasePreview(file ? URL.createObjectURL(file) : '')
+    setDiseaseStatus('')
+    setDiseaseResult(null)
+  }
+
+  const handleDiseasePredict = async () => {
+    if (!diseaseFile) {
+      setDiseaseStatus('Pilih foto daun terlebih dahulu.')
       return
     }
 
-    setTempStatus('Mengambil suhu...')
+    setDiseaseStatus('Memproses gambar...')
+    setDiseaseResult(null)
+
     try {
-      const geoResponse = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          trimmedLocation,
-        )}&count=1&language=id&format=json`,
-      )
+      const form = new FormData()
+      form.append('file', diseaseFile)
 
-      if (!geoResponse.ok) {
-        throw new Error('Geocoding gagal')
+      const response = await fetch('http://localhost:8000/predict-disease', {
+        method: 'POST',
+        body: form,
+      })
+
+      if (!response.ok) {
+        throw new Error('Prediction failed')
       }
 
-      const geoData = await geoResponse.json()
-      const location = geoData?.results?.[0]
-
-      if (!location) {
-        setTempStatus('Lokasi tidak ditemukan. Coba nama kota atau kabupaten.')
-        setTemperature('')
-        return
-      }
-
-      const weatherResponse = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,precipitation`,
-      )
-
-      if (!weatherResponse.ok) {
-        throw new Error('Cuaca tidak tersedia')
-      }
-
-      const weatherData = await weatherResponse.json()
-      const currentTemp = weatherData?.current?.temperature_2m
-      const currentRainfall = weatherData?.current?.precipitation
-
-      if (typeof currentTemp !== 'number') {
-        setTempStatus('Suhu saat ini belum tersedia.')
-        setTemperature('')
-        setRainfall('')
-        return
-      }
-
-      if (typeof currentRainfall === 'number') {
-        setRainfall(currentRainfall.toFixed(1))
-      } else {
-        setRainfall('')
-      }
-
-      const locationLabel = [location.name, location.admin1, location.country]
-        .filter(Boolean)
-        .join(', ')
-
-      setTemperature(currentTemp.toFixed(1))
-      setTempStatus(`Suhu dan curah hujan saat ini di ${locationLabel}.`)
+      const data = await response.json()
+      setDiseaseResult(data)
+      setDiseaseStatus('')
     } catch (error) {
-      setTempStatus('Gagal mengambil suhu. Coba lagi sebentar.')
+      setDiseaseStatus('Gagal mendeteksi penyakit. Pastikan API aktif.')
+    }
+  }
+
+  const handleFertilizerChange = (event) => {
+    const { name, value } = event.target
+    setFertilizerData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    if (fertilizerStatus) {
+      setFertilizerStatus('')
+    }
+  }
+
+  const handleFertilizerPredict = async () => {
+    const toNumber = (value) => {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+
+    const payload = {
+      temperature: toNumber(fertilizerData.temperature),
+      moisture: toNumber(fertilizerData.moisture),
+      rainfall: toNumber(fertilizerData.rainfall),
+      ph: toNumber(fertilizerData.ph),
+      soil: fertilizerData.soil.trim(),
+      crop: fertilizerData.crop.trim(),
+      nitrogen: toNumber(fertilizerData.nitrogen),
+      potassium: toNumber(fertilizerData.potassium),
+      phosphorous: toNumber(fertilizerData.phosphorous),
+      carbon: toNumber(fertilizerData.carbon),
+    }
+
+    const missingFields = Object.entries(payload)
+      .filter(([key, value]) => (key === 'soil' || key === 'crop') ? !value : value === null)
+      .map(([key]) => key)
+
+    if (missingFields.length > 0) {
+      setFertilizerStatus('Lengkapi semua input untuk rekomendasi pupuk.')
+      setFertilizerPrediction(null)
+      return
+    }
+
+    setFertilizerStatus('Mengirim data ke model...')
+    setFertilizerPrediction(null)
+
+    try {
+      const response = await fetch('http://localhost:8000/predict-fertilizer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Prediction failed')
+      }
+
+      const data = await response.json()
+      setFertilizerPrediction({
+        label: data.fertilizer,
+        confidence: typeof data.confidence === 'number' ? data.confidence : null,
+      })
+      setFertilizerStatus('')
+    } catch (error) {
+      setFertilizerStatus('Gagal memproses rekomendasi pupuk. Pastikan API aktif.')
     }
   }
 
@@ -128,13 +185,13 @@ function App() {
       .map(([key]) => key)
 
     if (!payload.soilType || missingFields.length > 0) {
-      setPredictStatus('Lengkapi semua input dan ambil suhu/curah hujan online.')
-      setPrediction('')
+      setPredictStatus('Lengkapi semua input, termasuk suhu dan curah hujan.')
+      setPrediction(null)
       return
     }
 
     setPredictStatus('Mengirim data ke model...')
-    setPrediction('')
+    setPrediction(null)
 
     try {
       const response = await fetch('http://localhost:8000/predict', {
@@ -150,7 +207,10 @@ function App() {
       }
 
       const data = await response.json()
-      setPrediction(data.crop)
+      setPrediction({
+        label: data.crop,
+        confidence: typeof data.confidence === 'number' ? data.confidence : null,
+      })
       setPredictStatus('')
     } catch (error) {
       setPredictStatus('Gagal memproses prediksi. Pastikan API aktif.')
@@ -159,135 +219,147 @@ function App() {
 
   const features = [
     {
+      tag: 'Terpadu',
+      title: 'Tiga layanan dalam satu platform',
+      desc: 'Rekomendasi tanaman, pupuk, dan deteksi penyakit menyatu dalam satu alur kerja.',
+    },
+    {
       tag: 'Presisi',
-      title: 'Rekomendasi berbasis data tanah',
-      desc: 'Sistem membaca pH, NPK, kelembapan, dan tekstur untuk memilih tanaman yang paling cocok.',
+      title: 'Berbasis data dan model internal',
+      desc: 'Menggunakan model AI milik SMARTANI untuk hasil yang konsisten di lapangan.',
     },
     {
-      tag: 'Cepat',
-      title: 'Analisis instan di satu layar',
-      desc: 'Input data, tekan deteksi, dan dapatkan daftar tanaman prioritas tanpa langkah rumit.',
-    },
-    {
-      tag: 'Fleksibel',
-      title: 'Siap dihubungkan dengan model Anda',
-      desc: 'Upload model yang sudah di-train untuk menyesuaikan kebutuhan wilayah dan jenis tanah lokal.',
+      tag: 'Efisien',
+      title: 'Keputusan cepat untuk petani',
+      desc: 'Cukup masukkan data, sistem memberikan hasil dan confidence score secara instan.',
     },
   ]
 
   const steps = [
     {
-      title: 'Masukkan data tanah',
-      desc: 'Input parameter inti seperti pH, kelembapan, NPK, tekstur, dan ketinggian lahan.',
+      title: 'Pilih fitur yang dibutuhkan',
+      desc: 'Rekomendasi tanaman, pupuk, atau deteksi penyakit sesuai tujuan Anda.',
     },
     {
-      title: 'Jalankan model AI',
-      desc: 'Model akan menghitung skor kecocokan dan memberikan ranking tanaman terbaik.',
+      title: 'Masukkan data atau foto',
+      desc: 'Isi parameter tanah atau unggah foto daun sesuai fitur yang dipilih.',
     },
     {
-      title: 'Terima rekomendasi',
-      desc: 'Lihat tanaman yang disarankan, plus catatan kondisi tanah untuk perbaikan lahan.',
+      title: 'Terima hasil dan confidence',
+      desc: 'Dapatkan hasil prediksi lengkap dengan tingkat keyakinan model.',
     },
   ]
 
-  const sampleCrops = ['Padi', 'Jagung', 'Cabai', 'Kedelai']
+  const featureTags = [
+    'Rekomendasi tanaman',
+    'Rekomendasi pupuk',
+    'Deteksi penyakit tanaman',
+  ]
+  const fertilizerSoilOptions = [
+    'Loamy Soil',
+    'Peaty Soil',
+    'Acidic Soil',
+    'Neutral Soil',
+    'Alkaline Soil',
+  ]
+  const fertilizerCropOptions = [
+    'rice',
+    'wheat',
+    'Mung Bean',
+    'Tea',
+    'millet',
+    'maize',
+    'Lentil',
+    'Jute',
+    'Coffee',
+    'Cotton',
+    'Ground Nut',
+    'Peas',
+    'Rubber',
+    'Sugarcane',
+    'Tobacco',
+    'Kidney Beans',
+    'Moth Beans',
+    'Coconut',
+    'Black gram',
+    'Adzuki Beans',
+    'Pigeon Peas',
+    'Chickpea',
+    'banana',
+    'grapes',
+    'apple',
+    'mango',
+    'muskmelon',
+    'orange',
+    'papaya',
+    'pomegranate',
+    'watermelon',
+  ]
+
+  const getCropSuggestion = (label) => {
+    if (!label) {
+      return ''
+    }
+    return `Saran AI: Pastikan pH, kelembapan, dan NPK sesuai untuk ${label}.`
+  }
+
+  const getFertilizerSuggestion = (label) => {
+    if (!label) {
+      return ''
+    }
+    return `Saran AI: Gunakan ${label} sesuai dosis pada label dan fase pertumbuhan.`
+  }
+
+  const getDiseaseSuggestion = (label) => {
+    if (!label) {
+      return ''
+    }
+    return 'Saran AI: Isolasi tanaman, buang daun terinfeksi, dan pantau kelembapan lahan.'
+  }
 
   return (
     <div className="page">
-      <header className="site-header">
+      <header className="site-header site-header-full">
         <div className="brand">
           <img src={smartaniLogo} className="brand-logo" alt="SMARTANI logo" />
           <div className="brand-text">
             <span className="brand-name">SMARTANI</span>
-            <span className="brand-sub">SoilMatch</span>
           </div>
         </div>
         <nav className="site-nav">
           <a href="#deteksi">Deteksi</a>
-          <a href="#model">Model</a>
+          <a href="#pupuk">Pupuk</a>
+          <a href="#penyakit">Penyakit</a>
           <a href="#fitur">Fitur</a>
           <a href="#cara-kerja">Cara kerja</a>
         </nav>
-        <button type="button" className="cta ghost">Minta Demo</button>
       </header>
 
       <main>
-        <section className="hero" id="home">
+        <section className="hero hero-full" id="home">
           <div className="hero-text">
-            <p className="eyebrow reveal delay-1">Deteksi tanaman berbasis kondisi tanah</p>
-            <h1 className="reveal delay-2">Rekomendasi tanaman paling cocok dari data tanahmu.</h1>
+            <p className="eyebrow reveal delay-1">
+              Rekomendasi tanaman, deteksi pupuk, deteksi penyakit tanaman
+            </p>
+            <h1 className="reveal delay-2">Satu dashboard AI untuk keputusan pertanian.</h1>
             <p className="lead reveal delay-3">
-              Integrasikan model AI yang sudah Anda latih. Masukkan parameter tanah untuk
-              mendapatkan rekomendasi tanaman yang paling potensial dari data lapangan.
+              Model AI SMARTANI sudah terlatih dan terintegrasi untuk membantu rekomendasi
+              tanaman, pupuk, serta deteksi penyakit secara cepat dan konsisten.
+            </p>
+            <p className="hero-note reveal delay-3">
+              Dirancang untuk petani, penyuluh, dan tim agronomi dengan hasil yang mudah dibaca.
             </p>
             <div className="hero-actions reveal delay-4">
               <button type="button" className="cta primary">Mulai Deteksi</button>
               <button type="button" className="cta outline">Lihat Cara Kerja</button>
             </div>
             <div className="hero-stats reveal delay-5">
-              <div className="stat-card">
-                <span className="stat-value">6</span>
-                <span className="stat-label">Parameter tanah</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">12+</span>
-                <span className="stat-label">Tanaman populer</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value">2026</span>
-                <span className="stat-label">Rilis awal</span>
-              </div>
-            </div>
-          </div>
-          <div className="hero-panel">
-            <div className="panel-card reveal delay-2">
-              <div className="panel-header">
-                <span>Status Analisis</span>
-                <span className="pill">Demo</span>
-              </div>
-              <div className="panel-metric">
-                <div className="metric-row">
-                  <span>pH Tanah</span>
-                  <span>5.8</span>
+              {featureTags.map((item) => (
+                <div key={item} className="stat-card">
+                  <span className="stat-value">{item}</span>
+                  <span className="stat-label">Fitur utama</span>
                 </div>
-                <div className="bar">
-                  <span className="bar-fill ph"></span>
-                </div>
-              </div>
-              <div className="panel-metric">
-                <div className="metric-row">
-                  <span>Kelembapan</span>
-                  <span>62%</span>
-                </div>
-                <div className="bar">
-                  <span className="bar-fill moisture"></span>
-                </div>
-              </div>
-              <div className="panel-metric">
-                <div className="metric-row">
-                  <span>Kesuburan NPK</span>
-                  <span>Medium</span>
-                </div>
-                <div className="bar">
-                  <span className="bar-fill npk"></span>
-                </div>
-              </div>
-              <div className="panel-recommendations">
-                <p>Rekomendasi awal</p>
-                <div className="chip-row">
-                  {sampleCrops.map((crop) => (
-                    <span key={crop} className="chip">{crop}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="panel-card mini reveal delay-3">
-              <img src={heroImg} alt="Ilustrasi data tanah" />
-              <div>
-                <h3>Monitor lahan</h3>
-                <p>Visualisasi status tanah dan indikator nutrisi.</p>
-                <button type="button" className="cta outline">Siapkan Model</button>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -296,7 +368,7 @@ function App() {
           <div className="section-header">
             <div>
               <h2>Alur kerja sederhana</h2>
-              <p>Dari data tanah ke rekomendasi tanaman dalam beberapa langkah.</p>
+              <p>Dari input data ke rekomendasi dan deteksi dalam beberapa langkah.</p>
             </div>
             <span className="section-tag">3 Langkah</span>
           </div>
@@ -343,12 +415,23 @@ function App() {
                 />
               </label>
               <label className="field">
-                <span>Lokasi (kota/kabupaten)</span>
+                <span>Suhu (C)</span>
                 <input
-                  type="text"
-                  placeholder="Contoh: Lembang, Bandung"
-                  value={locationQuery}
-                  onChange={handleLocationChange}
+                  type="number"
+                  step="0.1"
+                  placeholder="28.0"
+                  value={temperature}
+                  onChange={handleTemperatureChange}
+                />
+              </label>
+              <label className="field">
+                <span>Curah hujan (mm)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="5.0"
+                  value={rainfall}
+                  onChange={handleRainfallChange}
                 />
               </label>
               <label className="field">
@@ -372,7 +455,7 @@ function App() {
                 />
               </label>
               <label className="field">
-                <span>Kalium (K)</span>
+                <span>Potasium (K)</span>
                 <input
                   name="potassium"
                   type="number"
@@ -397,34 +480,6 @@ function App() {
                 </select>
               </label>
               <label className="field">
-                <span>Suhu saat ini (C)</span>
-                <div className="input-with-button">
-                  <input
-                    type="text"
-                    placeholder="Klik ambil suhu online"
-                    value={temperature}
-                    readOnly
-                  />
-                  <button
-                    type="button"
-                    className="cta outline small-button"
-                    onClick={handleFetchTemperature}
-                  >
-                    Ambil
-                  </button>
-                </div>
-                {tempStatus ? <span className="field-note">{tempStatus}</span> : null}
-              </label>
-              <label className="field">
-                <span>Curah hujan (mm)</span>
-                <input
-                  type="text"
-                  placeholder="Auto dari online"
-                  value={rainfall}
-                  readOnly
-                />
-              </label>
-              <label className="field">
                 <span>Carbon</span>
                 <input
                   name="carbon"
@@ -435,20 +490,241 @@ function App() {
                 />
               </label>
             </div>
+            <p className="form-tip">
+              Gunakan satuan standar (C, mm, %) dan isi data rata-rata terbaru.
+            </p>
             <div className="form-actions">
               <button type="button" className="cta primary" onClick={handlePredict}>
                 Deteksi Tanaman
               </button>
-              <button type="button" className="cta ghost">Simpan Profil Tanah</button>
             </div>
             {predictStatus ? <p className="form-note">{predictStatus}</p> : null}
             {prediction ? (
               <div className="prediction-card">
                 <span className="prediction-label">Rekomendasi utama</span>
-                <strong className="prediction-value">{prediction}</strong>
+                <strong className="prediction-value">{prediction.label}</strong>
+                {typeof prediction.confidence === 'number' ? (
+                  <span className="field-note">
+                    Keyakinan {Math.round(prediction.confidence * 100)}%
+                  </span>
+                ) : null}
+                {getCropSuggestion(prediction.label) ? (
+                  <p className="ai-suggestion">{getCropSuggestion(prediction.label)}</p>
+                ) : null}
               </div>
             ) : null}
           </form>
+        </section>
+
+        <section className="section" id="pupuk">
+          <div className="section-header">
+            <div>
+              <h2>Rekomendasi pupuk otomatis</h2>
+              <p>Masukkan data lingkungan dan tanaman untuk mendapatkan pupuk terbaik.</p>
+            </div>
+            <span className="section-tag">Rekomendasi Pupuk</span>
+          </div>
+          <form className="soil-form">
+            <div className="form-grid">
+              <label className="field">
+                <span>Temperature (C)</span>
+                <input
+                  name="temperature"
+                  type="number"
+                  step="0.1"
+                  placeholder="28"
+                  value={fertilizerData.temperature}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Moisture (%)</span>
+                <input
+                  name="moisture"
+                  type="number"
+                  placeholder="60"
+                  value={fertilizerData.moisture}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Curah hujan (mm)</span>
+                <input
+                  name="rainfall"
+                  type="number"
+                  step="0.1"
+                  placeholder="5.0"
+                  value={fertilizerData.rainfall}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>pH Tanah</span>
+                <input
+                  name="ph"
+                  type="number"
+                  step="0.1"
+                  placeholder="6.0"
+                  value={fertilizerData.ph}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Jenis tanah</span>
+                <select
+                  name="soil"
+                  value={fertilizerData.soil}
+                  onChange={handleFertilizerChange}
+                >
+                  <option value="" disabled>Pilih jenis tanah</option>
+                  {fertilizerSoilOptions.map((soil) => (
+                    <option key={soil} value={soil}>{soil}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Jenis tanaman</span>
+                <select
+                  name="crop"
+                  value={fertilizerData.crop}
+                  onChange={handleFertilizerChange}
+                >
+                  <option value="" disabled>Pilih jenis tanaman</option>
+                  {fertilizerCropOptions.map((crop) => (
+                    <option key={crop} value={crop}>{crop}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Nitrogen (N)</span>
+                <input
+                  name="nitrogen"
+                  type="number"
+                  placeholder="40"
+                  value={fertilizerData.nitrogen}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Fosfor (P)</span>
+                <input
+                  name="phosphorous"
+                  type="number"
+                  placeholder="25"
+                  value={fertilizerData.phosphorous}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Potasium (K)</span>
+                <input
+                  name="potassium"
+                  type="number"
+                  placeholder="35"
+                  value={fertilizerData.potassium}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Carbon</span>
+                <input
+                  name="carbon"
+                  type="number"
+                  placeholder="0.5"
+                  value={fertilizerData.carbon}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+            </div>
+            <p className="form-tip">
+              Pastikan jenis tanah dan tanaman sesuai daftar agar hasil lebih akurat.
+            </p>
+            <div className="form-actions">
+              <button type="button" className="cta primary" onClick={handleFertilizerPredict}>
+                Rekomendasi Pupuk
+              </button>
+            </div>
+            {fertilizerStatus ? <p className="form-note">{fertilizerStatus}</p> : null}
+            {fertilizerPrediction ? (
+              <div className="prediction-card">
+                <span className="prediction-label">Pupuk yang disarankan</span>
+                <strong className="prediction-value">{fertilizerPrediction.label}</strong>
+                {typeof fertilizerPrediction.confidence === 'number' ? (
+                  <span className="field-note">
+                    Keyakinan {Math.round(fertilizerPrediction.confidence * 100)}%
+                  </span>
+                ) : null}
+                {getFertilizerSuggestion(fertilizerPrediction.label) ? (
+                  <p className="ai-suggestion">
+                    {getFertilizerSuggestion(fertilizerPrediction.label)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </form>
+        </section>
+
+        <section className="section" id="penyakit">
+          <div className="section-header">
+            <div>
+              <h2>Deteksi penyakit tanaman</h2>
+              <p>Unggah foto daun untuk mengetahui jenis penyakit.</p>
+            </div>
+            <span className="section-tag">Deteksi Penyakit</span>
+          </div>
+          <div className="upload-panel">
+            <div className="upload-box">
+              <div className="drop-area">
+                <span className="drop-title">Upload atau ambil foto daun</span>
+                <span className="drop-sub">Gunakan foto fokus pada daun (JPG/PNG).</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="file-input"
+                onChange={handleDiseaseFileChange}
+              />
+              {diseasePreview ? (
+                <img
+                  src={diseasePreview}
+                  alt="Preview daun"
+                  className="preview-image"
+                />
+              ) : null}
+              <p className="form-tip">
+                Pastikan pencahayaan cukup dan daun tampak jelas untuk hasil terbaik.
+              </p>
+              <button
+                type="button"
+                className="cta primary"
+                onClick={handleDiseasePredict}
+                disabled={!diseaseFile}
+              >
+                Deteksi Penyakit
+              </button>
+              {diseaseStatus ? <p className="form-note">{diseaseStatus}</p> : null}
+            </div>
+            <div className="panel-card">
+              <h3>Hasil deteksi</h3>
+              {diseaseResult ? (
+                <div className="prediction-card compact">
+                  <span className="prediction-label">Penyakit terdeteksi</span>
+                  <strong className="prediction-value">{diseaseResult.label}</strong>
+                  {typeof diseaseResult.confidence === 'number' ? (
+                    <span className="field-note">
+                      Keyakinan {Math.round(diseaseResult.confidence * 100)}%
+                    </span>
+                  ) : null}
+                  {getDiseaseSuggestion(diseaseResult.label) ? (
+                    <p className="ai-suggestion">{getDiseaseSuggestion(diseaseResult.label)}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="field-note">Unggah foto untuk melihat hasil.</p>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="section" id="fitur">
@@ -475,13 +751,14 @@ function App() {
 
       <footer className="site-footer">
         <div>
-          <strong>SMARTANI SoilMatch</strong>
-          <p>Deteksi tanaman berbasis data tanah dan model AI.</p>
+          <strong>SMARTANI</strong>
+          <p>Rekomendasi tanaman, pupuk, dan deteksi penyakit berbasis AI.</p>
           <span className="small muted">Copyright 2026</span>
         </div>
         <div className="footer-links">
           <a href="#deteksi">Deteksi</a>
-          <a href="#model">Model</a>
+          <a href="#pupuk">Pupuk</a>
+          <a href="#penyakit">Penyakit</a>
           <a href="#fitur">Fitur</a>
           <a href="#cara-kerja">Cara kerja</a>
         </div>
