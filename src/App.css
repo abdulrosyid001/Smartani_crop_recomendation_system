@@ -232,9 +232,35 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.stat-media {
+  width: 100%;
+  height: 150px;
+  border-radius: 14px;
+  border: 1px solid rgba(223, 211, 192, 0.85);
+  background: linear-gradient(135deg, rgba(111, 180, 74, 0.16), rgba(47, 138, 77, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 6px;
+  margin-top: 8px;
+}
+
+.stat-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+  transition: transform 0.35s ease;
+}
+
 .stat-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 22px 40px -30px rgba(38, 45, 28, 0.5);
+}
+
+.stat-card:hover .stat-image {
+  transform: scale(1.03);
 }
 
 .stat-value {
@@ -242,6 +268,7 @@
   font-weight: 700;
   color: var(--ink);
   line-height: 1.3;
+  text-align: center;
 }
 
 .stat-label {
@@ -647,7 +674,34 @@
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.step-card h3 {
+  text-align: center;
+}
+
+.step-media {
+  width: 100%;
+  height: 130px;
+  border-radius: 16px;
+  border: 1px solid rgba(223, 211, 192, 0.85);
+  background: linear-gradient(140deg, rgba(47, 138, 77, 0.12), rgba(239, 229, 212, 0.85));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.step-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+  transition: transform 0.35s ease;
 }
 
 .step-card:hover {
@@ -655,10 +709,15 @@
   box-shadow: 0 22px 36px -32px rgba(38, 45, 28, 0.45);
 }
 
+.step-card:hover .step-image {
+  transform: scale(1.04);
+}
+
 .step-index {
   font-size: 12px;
   letter-spacing: 1.4px;
   color: var(--accent-2);
+  text-align: center;
 }
 
 .cta-banner {

@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
 import smartaniLogo from './assets/smartani.png'
+import cropRekomendasiImage from '../gambar/rekomendasi tanaman.png'
+import pupukRekomendasiImage from '../gambar/rekomendasi pupuk.png'
+import penyakitDeteksiImage from '../gambar/deteksi penyakit.png'
+import stepFiturImage from '../gambar/Fitur Yang Dibutuhkan.png'
+import stepDataImage from '../gambar/masukan data dan foto.png'
+import stepHasilImage from '../gambar/terima hasil dan konfidens.png'
 import './App.css'
 
 function App() {
@@ -250,20 +256,28 @@ function App() {
     {
       title: 'Pilih fitur yang dibutuhkan',
       desc: 'Rekomendasi tanaman, pupuk, atau deteksi penyakit sesuai tujuan Anda.',
+      image: stepFiturImage,
+      imageAlt: 'Ilustrasi memilih fitur',
     },
     {
       title: 'Masukkan data atau foto',
       desc: 'Isi parameter tanah atau unggah foto daun sesuai fitur yang dipilih.',
+      image: stepDataImage,
+      imageAlt: 'Ilustrasi input data dan foto',
     },
     {
       title: 'Terima hasil dan confidence',
       desc: 'Dapatkan hasil prediksi lengkap dengan tingkat keyakinan model.',
+      image: stepHasilImage,
+      imageAlt: 'Ilustrasi hasil dan keyakinan',
     },
   ]
 
   const featureCards = [
     {
       title: 'Rekomendasi tanaman',
+      image: cropRekomendasiImage,
+      imageAlt: 'Ilustrasi rekomendasi tanaman',
       desc: (
         <>
           <strong>Maksimalkan potensi lahan Anda tanpa ragu!</strong> Teknologi AI mutakhir kami menganalisis
@@ -276,6 +290,8 @@ function App() {
     },
     {
       title: 'Rekomendasi pupuk',
+      image: pupukRekomendasiImage,
+      imageAlt: 'Ilustrasi rekomendasi pupuk',
       desc: (
         <>
           <strong>Berhenti membuang biaya untuk pupuk yang tidak efisien!</strong> Cukup masukkan kondisi aktual
@@ -288,6 +304,8 @@ function App() {
     },
     {
       title: 'Deteksi penyakit tanaman',
+      image: penyakitDeteksiImage,
+      imageAlt: 'Ilustrasi deteksi penyakit tanaman',
       desc: (
         <>
           <strong>Satu jepretan untuk selamatkan panen Anda!</strong> Kenali penyakit tanaman dalam hitungan detik
@@ -398,6 +416,14 @@ function App() {
               {featureCards.map((item) => (
                 <div key={item.title} className="stat-card">
                   <span className="stat-value">{item.title}</span>
+                  <div className="stat-media">
+                    <img
+                      src={item.image}
+                      alt={item.imageAlt}
+                      className="stat-image"
+                      loading="lazy"
+                    />
+                  </div>
                   <p className="stat-desc">{item.desc}</p>
                 </div>
               ))}
@@ -418,6 +444,14 @@ function App() {
               <div key={step.title} className="step-card">
                 <span className="step-index">0{index + 1}</span>
                 <h3>{step.title}</h3>
+                <div className="step-media">
+                  <img
+                    src={step.image}
+                    alt={step.imageAlt}
+                    className="step-image"
+                    loading="lazy"
+                  />
+                </div>
                 <p>{step.desc}</p>
               </div>
             ))}
