@@ -17,6 +17,10 @@
   --shadow: 0 20px 40px -28px rgba(38, 45, 28, 0.45);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -147,4 +151,10 @@ input:focus {
 
 .muted {
   color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

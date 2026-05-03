@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import smartaniLogo from './assets/smartani.png'
 import './App.css'
 
@@ -7,6 +7,7 @@ function App() {
   const [rainfall, setRainfall] = useState('')
   const [prediction, setPrediction] = useState(null)
   const [predictStatus, setPredictStatus] = useState('')
+  const [showBackToTop, setShowBackToTop] = useState(false)
   const [diseaseFile, setDiseaseFile] = useState(null)
   const [diseasePreview, setDiseasePreview] = useState('')
   const [diseaseStatus, setDiseaseStatus] = useState('')
@@ -42,6 +43,16 @@ function App() {
   const handleRainfallChange = (event) => {
     setRainfall(event.target.value)
   }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400)
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleFormChange = (event) => {
     const { name, value } = event.target
@@ -225,7 +236,7 @@ function App() {
     },
     {
       tag: 'Presisi',
-      title: 'Berbasis data dan model internal',
+      title: 'Berbasis data dan model terlatih',
       desc: 'Menggunakan model AI milik SMARTANI untuk hasil yang konsisten di lapangan.',
     },
     {
@@ -318,7 +329,7 @@ function App() {
   }
 
   return (
-    <div className="page">
+    <div className="page" id="top">
       <header className="site-header site-header-full">
         <div className="brand">
           <img src={smartaniLogo} className="brand-logo" alt="SMARTANI logo" />
@@ -327,11 +338,11 @@ function App() {
           </div>
         </div>
         <nav className="site-nav">
-          <a href="#deteksi">Deteksi</a>
-          <a href="#pupuk">Pupuk</a>
-          <a href="#penyakit">Penyakit</a>
-          <a href="#fitur">Fitur</a>
           <a href="#cara-kerja">Cara kerja</a>
+          <a href="#deteksi">Deteksi Tanaman</a>
+          <a href="#pupuk">Rekomendasi Pupuk</a>
+          <a href="#penyakit">Deteksi Penyakit</a>
+          <a href="#fitur">Fitur</a>
         </nav>
       </header>
 
@@ -341,17 +352,17 @@ function App() {
             <p className="eyebrow reveal delay-1">
               Rekomendasi tanaman, deteksi pupuk, deteksi penyakit tanaman
             </p>
-            <h1 className="reveal delay-2">Satu dashboard AI untuk keputusan pertanian.</h1>
+            <h1 className="reveal delay-2">Platform cerdas untuk keputusan pertanian yang lebih tepat.</h1>
             <p className="lead reveal delay-3">
-              Model AI SMARTANI sudah terlatih dan terintegrasi untuk membantu rekomendasi
-              tanaman, pupuk, serta deteksi penyakit secara cepat dan konsisten.
+              SMARTANI hadir untuk membantu petani dalam rekomendasi
+              tanaman, pupuk, serta deteksi penyakit secara cepat dan konsisten guna mendukung <em>Nature-Based Solutions & Blue Economy</em>.
             </p>
             <p className="hero-note reveal delay-3">
               Dirancang untuk petani, penyuluh, dan tim agronomi dengan hasil yang mudah dibaca.
             </p>
             <div className="hero-actions reveal delay-4">
-              <button type="button" className="cta primary">Mulai Deteksi</button>
-              <button type="button" className="cta outline">Lihat Cara Kerja</button>
+              <a href="#deteksi" className="cta primary">Mulai Deteksi</a>
+              <a href="#cara-kerja" className="cta outline">Lihat Cara Kerja</a>
             </div>
             <div className="hero-stats reveal delay-5">
               {featureTags.map((item) => (
@@ -763,6 +774,11 @@ function App() {
           <a href="#cara-kerja">Cara kerja</a>
         </div>
       </footer>
+      {showBackToTop ? (
+        <a href="#top" className="back-to-top" aria-label="Kembali ke atas">
+          ^
+        </a>
+      ) : null}
     </div>
   )
 }
