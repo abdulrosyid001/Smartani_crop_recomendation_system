@@ -261,10 +261,42 @@ function App() {
     },
   ]
 
-  const featureTags = [
-    'Rekomendasi tanaman',
-    'Rekomendasi pupuk',
-    'Deteksi penyakit tanaman',
+  const featureCards = [
+    {
+      title: 'Rekomendasi tanaman',
+      desc: (
+        <>
+          <strong>Maksimalkan potensi lahan Anda tanpa ragu!</strong> Teknologi AI mutakhir kami menganalisis
+          karakteristik tanah Anda secara mendalam untuk merekomendasikan jenis tanaman yang
+          paling menguntungkan. Didukung oleh <strong>Ensemble Machine Learning</strong> dengan
+          akurasi <strong>99,3%</strong> dan fitur transparansi tingkat kepercayaan (UQ), setiap keputusan tanam
+          Anda kini didasarkan pada data presisi tinggi, bukan sekadar tebakan.
+        </>
+      ),
+    },
+    {
+      title: 'Rekomendasi pupuk',
+      desc: (
+        <>
+          <strong>Berhenti membuang biaya untuk pupuk yang tidak efisien!</strong> Cukup masukkan kondisi aktual
+          tanah dan lingkungan Anda, dan algoritma Random Forest kami akan meracik rekomendasi
+          jenis pupuk yang paling spesifik. Berikan nutrisi yang tepat pada takaran yang pas
+          untuk memastikan <strong>tanaman tumbuh subur maksimal sekaligus menekan biaya operasional</strong>
+          pertanian Anda.
+        </>
+      ),
+    },
+    {
+      title: 'Deteksi penyakit tanaman',
+      desc: (
+        <>
+          <strong>Satu jepretan untuk selamatkan panen Anda!</strong> Kenali penyakit tanaman dalam hitungan detik
+          hanya dengan mengunggah foto daun yang bermasalah. Menggunakan teknologi Computer Vision
+          yang dilatih dengan puluhan ribu data visual, SMARTANI memberikan diagnosis instan dan akurat.
+          <strong>Deteksi lebih dini, tangani lebih cepat, dan pastikan hasil panen Anda tetap terjaga.</strong>
+        </>
+      ),
+    },
   ]
   const fertilizerSoilOptions = [
     'Loamy Soil',
@@ -352,23 +384,21 @@ function App() {
             <p className="eyebrow reveal delay-1">
               Rekomendasi tanaman, deteksi pupuk, deteksi penyakit tanaman
             </p>
-            <h1 className="reveal delay-2">Platform cerdas untuk keputusan pertanian yang lebih tepat.</h1>
+            <h1 className="reveal delay-2">Satu dashboard AI untuk keputusan pertanian.</h1>
             <p className="lead reveal delay-3">
               SMARTANI hadir untuk membantu petani dalam rekomendasi
               tanaman, pupuk, serta deteksi penyakit secara cepat dan konsisten guna mendukung <em>Nature-Based Solutions & Blue Economy</em>.
             </p>
-            <p className="hero-note reveal delay-3">
-              Dirancang untuk petani, penyuluh, dan tim agronomi dengan hasil yang mudah dibaca.
-            </p>
+            
             <div className="hero-actions reveal delay-4">
               <a href="#deteksi" className="cta primary">Mulai Deteksi</a>
               <a href="#cara-kerja" className="cta outline">Lihat Cara Kerja</a>
             </div>
             <div className="hero-stats reveal delay-5">
-              {featureTags.map((item) => (
-                <div key={item} className="stat-card">
-                  <span className="stat-value">{item}</span>
-                  <span className="stat-label">Fitur utama</span>
+              {featureCards.map((item) => (
+                <div key={item.title} className="stat-card">
+                  <span className="stat-value">{item.title}</span>
+                  <p className="stat-desc">{item.desc}</p>
                 </div>
               ))}
             </div>

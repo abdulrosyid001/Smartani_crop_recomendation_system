@@ -249,6 +249,13 @@
   color: var(--muted);
 }
 
+.stat-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: justify;
+}
+
 .hero-panel {
   display: grid;
   gap: 16px;
