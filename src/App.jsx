@@ -8,6 +8,8 @@ import stepDataImage from '../gambar/masukan data dan foto.png'
 import stepHasilImage from '../gambar/terima hasil dan konfidens.png'
 import './App.css'
 
+const API_BASE_URL = 'https://abdulrosyid-smartani.hf.space'
+
 function App() {
   const [temperature, setTemperature] = useState('')
   const [rainfall, setRainfall] = useState('')
@@ -128,7 +130,7 @@ function App() {
     setChatStatus('loading')
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +181,8 @@ function App() {
       const form = new FormData()
       form.append('file', diseaseFile)
 
-      const response = await fetch('http://localhost:8000/predict-disease', {
+      {
+      const response = await fetch(`${API_BASE_URL}/predict-disease`, {
         method: 'POST',
         body: form,
       })
@@ -240,7 +243,7 @@ function App() {
     setFertilizerPrediction(null)
 
     try {
-      const response = await fetch('http://localhost:8000/predict-fertilizer', {
+      const response = await fetch(`${API_BASE_URL}/predict-fertilizer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -295,7 +298,7 @@ function App() {
     setPrediction(null)
 
     try {
-      const response = await fetch('http://localhost:8000/predict', {
+      const response = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
