@@ -7,6 +7,7 @@ SMARTANI adalah dashboard AI untuk rekomendasi tanaman, rekomendasi pupuk, dan d
 - Rekomendasi tanaman berbasis data tanah dan cuaca.
 - Rekomendasi pupuk berdasarkan kondisi lahan dan jenis tanaman.
 - Deteksi penyakit tanaman dari foto daun.
+- Chat BoTani untuk tanya jawab pertanian (DeepSeek).
 - Confidence score untuk setiap prediksi.
 - UI ringkas dengan alur kerja 3 langkah.
 
@@ -35,6 +36,16 @@ SMARTANI adalah dashboard AI untuk rekomendasi tanaman, rekomendasi pupuk, dan d
 - Python 3.10+.
 
 ## Instalasi dan menjalankan
+
+### 0) Konfigurasi BoTani (DeepSeek)
+
+Buat file `server/.env` lalu isi API key:
+
+```env
+DEEPSEEK_API_KEY=isi_api_key_anda
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
+```
 
 ### 1) Backend (API)
 
@@ -86,6 +97,7 @@ Letakkan file model di [server/models/](server/models/). Beberapa fitur tidak ak
 - `POST /predict` - rekomendasi tanaman.
 - `POST /predict-fertilizer` - rekomendasi pupuk.
 - `POST /predict-disease` - deteksi penyakit dari gambar.
+- `POST /chat` - chat BoTani (DeepSeek).
 
 Contoh payload `POST /predict`:
 
@@ -121,6 +133,24 @@ Contoh payload `POST /predict-fertilizer`:
 ```
 
 Untuk `POST /predict-disease`, kirim file gambar dengan form-data key `file`.
+
+Contoh payload `POST /chat`:
+
+```json
+{
+	"message": "Apa pupuk yang cocok untuk padi di musim hujan?",
+	"history": [
+		{
+			"role": "user",
+			"content": "Saya menanam padi di lahan sawah."
+		},
+		{
+			"role": "assistant",
+			"content": "Baik, berapa pH tanahnya?"
+		}
+	]
+}
+```
 
 ## Troubleshooting
 
