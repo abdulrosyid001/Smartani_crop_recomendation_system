@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import smartaniLogo from './assets/smartani.png'
 import cropRekomendasiImage from '../gambar/rekomendasi tanaman.png'
 import pupukRekomendasiImage from '../gambar/rekomendasi pupuk.png'
@@ -14,6 +14,17 @@ function App() {
   const [prediction, setPrediction] = useState(null)
   const [predictStatus, setPredictStatus] = useState('')
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: 'assistant',
+      content: 'Halo! Saya BoTani. Tanyakan soal tanaman, pupuk, atau penyakit.',
+    },
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [chatStatus, setChatStatus] = useState('')
+  const chatEndRef = useRef(null)
+  const chatInputRef = useRef(null)
   const [diseaseFile, setDiseaseFile] = useState(null)
   const [diseasePreview, setDiseasePreview] = useState('')
   const [diseaseStatus, setDiseaseStatus] = useState('')
@@ -60,6 +71,18 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    if (chatOpen && chatInputRef.current) {
+      chatInputRef.current.focus()
+    }
+  }, [chatOpen])
+
+  useEffect(() => {
+    if (chatOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [chatMessages, chatOpen])
+
   const handleFormChange = (event) => {
     const { name, value } = event.target
     setFormData((prev) => ({
@@ -80,6 +103,67 @@ function App() {
     setDiseasePreview(file ? URL.createObjectURL(file) : '')
     setDiseaseStatus('')
     setDiseaseResult(null)
+  }
+
+  const handleChatToggle = () => {
+    setChatOpen((prev) => !prev)
+  }
+
+  const handleChatInputChange = (event) => {
+    setChatInput(event.target.value)
+  }
+
+  const handleChatSend = async () => {
+    const trimmed = chatInput.trim()
+    if (!trimmed || chatStatus === 'loading') {
+      return
+    }
+
+    const history = chatMessages
+      .filter((item) => item.role === 'user' || item.role === 'assistant')
+      .slice(-6)
+
+    setChatMessages((prev) => [...prev, { role: 'user', content: trimmed }])
+    setChatInput('')
+    setChatStatus('loading')
+
+    try {
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Chat failed')
+      }
+
+      const data = await response.json()
+      const reply = data.reply?.trim() || 'Maaf, BoTani belum punya jawaban.'
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: reply }])
+      setChatStatus('')
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Maaf, koneksi ke BoTani sedang bermasalah. Coba lagi sebentar.',
+        },
+      ])
+      setChatStatus('')
+    }
+  }
+
+  const handleChatKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      handleChatSend()
+    }
   }
 
   const handleDiseasePredict = async () => {
@@ -283,7 +367,7 @@ function App() {
           <strong>Maksimalkan potensi lahan Anda tanpa ragu!</strong> Teknologi AI mutakhir kami menganalisis
           karakteristik tanah Anda secara mendalam untuk merekomendasikan jenis tanaman yang
           paling menguntungkan. Didukung oleh <strong>Ensemble Machine Learning</strong> dengan
-          akurasi <strong>99,3%</strong> dan fitur transparansi tingkat kepercayaan (UQ), setiap keputusan tanam
+          akurasi <strong>96,6%</strong> dan fitur transparansi tingkat kepercayaan (UQ), setiap keputusan tanam
           Anda kini didasarkan pada data presisi tinggi, bukan sekadar tebakan.
         </>
       ),
@@ -296,7 +380,7 @@ function App() {
         <>
           <strong>Berhenti membuang biaya untuk pupuk yang tidak efisien!</strong> Cukup masukkan kondisi aktual
           tanah dan lingkungan Anda, dan algoritma Random Forest kami akan meracik rekomendasi
-          jenis pupuk yang paling spesifik. Berikan nutrisi yang tepat pada takaran yang pas
+          jenis pupuk yang paling spesifik dengan tingkat akurasi 98%. Berikan nutrisi yang tepat pada takaran yang pas
           untuk memastikan <strong>tanaman tumbuh subur maksimal sekaligus menekan biaya operasional</strong>
           pertanian Anda.
         </>
@@ -310,8 +394,8 @@ function App() {
         <>
           <strong>Satu jepretan untuk selamatkan panen Anda!</strong> Kenali penyakit tanaman dalam hitungan detik
           hanya dengan mengunggah foto daun yang bermasalah. Menggunakan teknologi Computer Vision
-          yang dilatih dengan puluhan ribu data visual, SMARTANI memberikan diagnosis instan dan akurat.
-          <strong>Deteksi lebih dini, tangani lebih cepat, dan pastikan hasil panen Anda tetap terjaga.</strong>
+          yang dilatih dengan puluhan ribu data visual, SMARTANI memberikan diagnosis instan dengan akurasi sebesar 99,5%. 
+          <strong> Deteksi lebih dini, tangani lebih cepat, dan pastikan hasil panen Anda tetap terjaga.</strong>
         </>
       ),
     },
@@ -361,21 +445,21 @@ function App() {
     if (!label) {
       return ''
     }
-    return `Saran AI: Pastikan pH, kelembapan, dan NPK sesuai untuk ${label}.`
+    return `Saran: Pastikan pH, kelembapan, dan NPK sesuai untuk ${label}.`
   }
 
   const getFertilizerSuggestion = (label) => {
     if (!label) {
       return ''
     }
-    return `Saran AI: Gunakan ${label} sesuai dosis pada label dan fase pertumbuhan.`
+    return `Saran: Gunakan ${label} sesuai dosis pada label dan fase pertumbuhan.`
   }
 
   const getDiseaseSuggestion = (label) => {
     if (!label) {
       return ''
     }
-    return 'Saran AI: Isolasi tanaman, buang daun terinfeksi, dan pantau kelembapan lahan.'
+    return 'Saran: Isolasi tanaman, buang daun terinfeksi, dan pantau kelembapan lahan.'
   }
 
   return (
@@ -402,7 +486,7 @@ function App() {
             <p className="eyebrow reveal delay-1">
               Rekomendasi tanaman, deteksi pupuk, deteksi penyakit tanaman
             </p>
-            <h1 className="reveal delay-2">Satu dashboard AI untuk keputusan pertanian.</h1>
+            <h1 className="reveal delay-2">Platform cerdas untuk keputusan pertanian yang lebih tepat.</h1>
             <p className="lead reveal delay-3">
               SMARTANI hadir untuk membantu petani dalam rekomendasi
               tanaman, pupuk, serta deteksi penyakit secara cepat dan konsisten guna mendukung <em>Nature-Based Solutions & Blue Economy</em>.
@@ -490,7 +574,7 @@ function App() {
                 />
               </label>
               <label className="field">
-                <span>Suhu (C)</span>
+                <span>Temperature (C)</span>
                 <input
                   type="number"
                   step="0.1"
@@ -602,6 +686,27 @@ function App() {
           <form className="soil-form">
             <div className="form-grid">
               <label className="field">
+                <span>pH Tanah</span>
+                <input
+                  name="ph"
+                  type="number"
+                  step="0.1"
+                  placeholder="6.0"
+                  value={fertilizerData.ph}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
+                <span>Kelembapan (%)</span>
+                <input
+                  name="moisture"
+                  type="number"
+                  placeholder="60"
+                  value={fertilizerData.moisture}
+                  onChange={handleFertilizerChange}
+                />
+              </label>
+              <label className="field">
                 <span>Temperature (C)</span>
                 <input
                   name="temperature"
@@ -609,16 +714,6 @@ function App() {
                   step="0.1"
                   placeholder="28"
                   value={fertilizerData.temperature}
-                  onChange={handleFertilizerChange}
-                />
-              </label>
-              <label className="field">
-                <span>Moisture (%)</span>
-                <input
-                  name="moisture"
-                  type="number"
-                  placeholder="60"
-                  value={fertilizerData.moisture}
                   onChange={handleFertilizerChange}
                 />
               </label>
@@ -632,43 +727,6 @@ function App() {
                   value={fertilizerData.rainfall}
                   onChange={handleFertilizerChange}
                 />
-              </label>
-              <label className="field">
-                <span>pH Tanah</span>
-                <input
-                  name="ph"
-                  type="number"
-                  step="0.1"
-                  placeholder="6.0"
-                  value={fertilizerData.ph}
-                  onChange={handleFertilizerChange}
-                />
-              </label>
-              <label className="field">
-                <span>Jenis tanah</span>
-                <select
-                  name="soil"
-                  value={fertilizerData.soil}
-                  onChange={handleFertilizerChange}
-                >
-                  <option value="" disabled>Pilih jenis tanah</option>
-                  {fertilizerSoilOptions.map((soil) => (
-                    <option key={soil} value={soil}>{soil}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Jenis tanaman</span>
-                <select
-                  name="crop"
-                  value={fertilizerData.crop}
-                  onChange={handleFertilizerChange}
-                >
-                  <option value="" disabled>Pilih jenis tanaman</option>
-                  {fertilizerCropOptions.map((crop) => (
-                    <option key={crop} value={crop}>{crop}</option>
-                  ))}
-                </select>
               </label>
               <label className="field">
                 <span>Nitrogen (N)</span>
@@ -699,6 +757,32 @@ function App() {
                   value={fertilizerData.potassium}
                   onChange={handleFertilizerChange}
                 />
+              </label>
+              <label className="field">
+                <span>Jenis tanah</span>
+                <select
+                  name="soil"
+                  value={fertilizerData.soil}
+                  onChange={handleFertilizerChange}
+                >
+                  <option value="" disabled>Pilih jenis tanah</option>
+                  {fertilizerSoilOptions.map((soil) => (
+                    <option key={soil} value={soil}>{soil}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Jenis tanaman</span>
+                <select
+                  name="crop"
+                  value={fertilizerData.crop}
+                  onChange={handleFertilizerChange}
+                >
+                  <option value="" disabled>Pilih jenis tanaman</option>
+                  {fertilizerCropOptions.map((crop) => (
+                    <option key={crop} value={crop}>{crop}</option>
+                  ))}
+                </select>
               </label>
               <label className="field">
                 <span>Carbon</span>
@@ -838,11 +922,63 @@ function App() {
           <a href="#cara-kerja">Cara kerja</a>
         </div>
       </footer>
-      {showBackToTop ? (
-        <a href="#top" className="back-to-top" aria-label="Kembali ke atas">
-          ^
-        </a>
-      ) : null}
+      <div className={`chat-panel ${chatOpen ? 'open' : ''}`} aria-hidden={!chatOpen}>
+        <div className="chat-header">
+          <div>
+            <span className="chat-title">BoTani</span>
+            <span className="chat-subtitle">Asisten AI pertanian</span>
+          </div>
+          <button
+            type="button"
+            className="chat-close"
+            onClick={() => setChatOpen(false)}
+            aria-label="Tutup chat"
+          >
+            x
+          </button>
+        </div>
+        <div className="chat-body">
+          {chatMessages.map((item, index) => (
+            <div key={`${item.role}-${index}`} className={`chat-message ${item.role}`}>
+              <span className="chat-bubble">{item.content}</span>
+            </div>
+          ))}
+          {chatStatus === 'loading' ? (
+            <div className="chat-message assistant">
+              <span className="chat-bubble typing">BoTani sedang mengetik...</span>
+            </div>
+          ) : null}
+          <div ref={chatEndRef} />
+        </div>
+        <div className="chat-input">
+          <textarea
+            ref={chatInputRef}
+            rows="2"
+            placeholder="Tulis pesan ke BoTani..."
+            value={chatInput}
+            onChange={handleChatInputChange}
+            onKeyDown={handleChatKeyDown}
+          />
+          <button type="button" className="chat-send" onClick={handleChatSend}>
+            Kirim
+          </button>
+        </div>
+      </div>
+      <div className="floating-actions">
+        <button
+          type="button"
+          className={`chat-fab ${chatOpen ? 'active' : ''}`}
+          onClick={handleChatToggle}
+          aria-label="Chat dengan BoTani"
+        >
+          BOT
+        </button>
+        {showBackToTop ? (
+          <a href="#top" className="back-to-top" aria-label="Kembali ke atas">
+            ^
+          </a>
+        ) : null}
+      </div>
     </div>
   )
 }

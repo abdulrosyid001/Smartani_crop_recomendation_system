@@ -1,16 +1,21 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
 import joblib
 import numpy as np
 import os
 import io
 import json
+import re
 from typing import Optional
+from dotenv import load_dotenv
 import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import models, transforms
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "models"))
 MODEL_CANDIDATES = [
@@ -38,7 +43,7 @@ DISEASE_CLASSES_CANDIDATES = [
     "plant_disease_classes.txt",
 ]
 FERTILIZER_MODEL_CANDIDATES = [
-    "random_forest_model.pkl",
+    "random_forest_model_rf.pkl",
 ]
 FERTILIZER_SCALER_CANDIDATES = [
     "scaler_rf.pkl",
@@ -210,6 +215,16 @@ class FertilizerRequest(BaseModel):
     potassium: float
     phosphorous: float
     carbon: float
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
 
 
 @app.on_event("startup")
@@ -429,3 +444,79 @@ def predict_fertilizer(payload: FertilizerRequest) -> dict:
             confidence = None
 
     return {"fertilizer": fertilizer_label, "confidence": confidence}
+
+
+@app.post("/chat")
+async def chat(payload: ChatRequest) -> dict:
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Missing DEEPSEEK_API_KEY")
+
+    api_url = os.getenv(
+        "DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions"
+    )
+    model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+    user_message = payload.message.strip()
+    if not user_message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "kamu adalah BoTani, asisten virtual untuk pertanian yang membantu tentang rekomendasi tanaman, "
+                "rekomendasi pupuk dan deteksi penyakit tanaman. jangan gunakan ** yang membuat kata tebal karena ini bukan dalam sistem "
+                "melainkan chatbot supaya lebih tertata dengan rapi. Gunakan baris baru untuk penomoran. "
+                "Jawab dalam bahasa Indonesia, singkat, dan praktis untuk petani."
+            ),
+        }
+    ]
+
+    for item in payload.history:
+        if item.role not in ("user", "assistant"):
+            continue
+        content = item.content.strip()
+        if content:
+            messages.append({"role": item.role, "content": content})
+
+    messages.append({"role": "user", "content": user_message})
+
+    request_body = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.6,
+        "max_tokens": 512,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(api_url, json=request_body, headers=headers)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Failed to reach DeepSeek API") from exc
+
+    if response.status_code >= 400:
+        try:
+            error_data = response.json()
+        except ValueError:
+            error_data = {"error": response.text}
+        raise HTTPException(status_code=502, detail=error_data)
+
+    data = response.json()
+    reply = ""
+    try:
+        reply = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        reply = ""
+
+    reply = reply.strip()
+    reply = re.sub(r"(?<!\n)\s(\d{1,2}[.)])\s", r"\n\1 ", reply)
+    if not reply:
+        reply = "Maaf, BoTani belum punya jawaban untuk saat ini."
+
+    return {"reply": reply, "model": model}
