@@ -181,7 +181,6 @@ function App() {
       const form = new FormData()
       form.append('file', diseaseFile)
 
-      {
       const response = await fetch(`${API_BASE_URL}/predict-disease`, {
         method: 'POST',
         body: form,
